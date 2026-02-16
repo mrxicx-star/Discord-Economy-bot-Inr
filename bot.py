@@ -14,7 +14,7 @@ if TOKEN is None:
     print("Add DISCORD_BOT_TOKEN in Railway Environment Variables")
     exit()
 
-# ----------------------------
+# ---------------------------
 # BOT SETUP
 # ----------------------------
 intents = discord.Intents.all()
