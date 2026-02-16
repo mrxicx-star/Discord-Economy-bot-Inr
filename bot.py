@@ -45,18 +45,19 @@ def make_embed(title, desc, color):
     return embed
 
 # ----------------------------
-# HELP MENU BUTTONS (OWO STYLE)
+# HELP MENU BUTTONS (OwO-style)
 # ----------------------------
 class HelpMenu(discord.ui.View):
     def __init__(self):
-        super().__init__(timeout=120)
+        super().__init__(timeout=None)
 
-    async def update_embed(self, interaction, title, description):
-        embed = discord.Embed(title=title, description=description, color=discord.Color.red())
+    async def update_embed(self, interaction, title, desc):
+        embed = discord.Embed(title=title, description=desc, color=discord.Color.red())
         embed.set_thumbnail(url=INR_IMAGE)
         embed.set_footer(text="₹ INR Economy Bot | Help Menu")
         await interaction.response.edit_message(embed=embed, view=self)
 
+    # Economy Category
     @discord.ui.button(label="💰 Economy", style=discord.ButtonStyle.green)
     async def economy(self, interaction: discord.Interaction, button: discord.ui.Button):
         desc = (
@@ -65,10 +66,35 @@ class HelpMenu(discord.ui.View):
             "`!hunt` ➤ Hunt animals for cash\n"
             "`!lootbox` ➤ Open a lootbox for random cash\n"
             "`!top` ➤ Show top richest users\n"
-            "`!gamble <amount>` ➤ Gamble cash to win or lose\n"
-            "`!coinflip <amount> <heads/tails>` ➤ Flip a coin and win or lose\n"
         )
         await self.update_embed(interaction, "💰 Economy Commands", desc)
+
+    # Gambling Category
+    @discord.ui.button(label="🎰 Gambling", style=discord.ButtonStyle.blurple)
+    async def gambling(self, interaction: discord.Interaction, button: discord.ui.Button):
+        desc = (
+            "`!gamble <amount>` ➤ Gamble cash to win or lose\n"
+            "`!coinflip <amount> <heads/tails>` ➤ Flip a coin to win or lose\n"
+        )
+        await self.update_embed(interaction, "🎰 Gambling Commands", desc)
+
+    # Fun Category
+    @discord.ui.button(label="🎲 Fun", style=discord.ButtonStyle.grey)
+    async def fun(self, interaction: discord.Interaction, button: discord.ui.Button):
+        desc = (
+            "No fun commands yet, but coming soon!\n"
+            "Stay tuned for more interactive features!"
+        )
+        await self.update_embed(interaction, "🎲 Fun Commands", desc)
+
+    # Info / Bot Category
+    @discord.ui.button(label="ℹ️ Info", style=discord.ButtonStyle.blurple)
+    async def info(self, interaction: discord.Interaction, button: discord.ui.Button):
+        desc = (
+            "`!help` ➤ Show this help menu\n"
+            "`!ping` ➤ Check bot latency\n"
+        )
+        await self.update_embed(interaction, "ℹ️ Info Commands", desc)
 
 # ----------------------------
 # EVENTS
@@ -78,23 +104,28 @@ async def on_ready():
     print(f"✅ Bot Online: {bot.user}")
 
 # ----------------------------
-# COMMANDS
+# HELP COMMAND
 # ----------------------------
 @bot.command()
 async def help(ctx):
     embed = discord.Embed(
         title="🚨 INR Economy Bot Help Menu",
-        description="Click the button below to view Economy commands",
+        description="Click the buttons below to view different command categories!",
         color=discord.Color.red()
     )
     embed.set_thumbnail(url=INR_IMAGE)
-    embed.set_footer(text="All Commands ✅ | Click button for details")
+    embed.set_footer(text="All Commands ✅ | Click a button for details")
     await ctx.send(embed=embed, view=HelpMenu())
 
+# ----------------------------
+# ECONOMY COMMANDS
+# ----------------------------
 @bot.command()
 async def balance(ctx):
     user = get_user(ctx.author.id)
-    embed = make_embed("💰 Wallet Balance", f"**{ctx.author.name}**, you have:\n\n### ₹{user['balance']} INR", discord.Color.green())
+    embed = make_embed("💰 Wallet Balance",
+                       f"**{ctx.author.name}**, you have:\n\n### ₹{user['balance']} INR",
+                       discord.Color.green())
     await ctx.send(embed=embed)
 
 @bot.command()
@@ -102,19 +133,21 @@ async def daily(ctx):
     user = get_user(ctx.author.id)
     now = time.time()
     cooldown = 86400  # 24h
-
     if now - user["last_daily"] < cooldown:
         remaining = int(cooldown - (now - user["last_daily"]))
         hours = remaining // 3600
         minutes = (remaining % 3600) // 60
-        embed = make_embed("⏳ Daily Cooldown", f"Come back in **{hours}h {minutes}m** for your next daily cash!", discord.Color.red())
+        embed = make_embed("⏳ Daily Cooldown",
+                           f"Come back in **{hours}h {minutes}m** for your next daily cash!",
+                           discord.Color.red())
         return await ctx.send(embed=embed)
-
     reward = random.randint(300, 800)
     user["balance"] += reward
     user["last_daily"] = now
     save_data()
-    embed = make_embed("🎁 Daily Cash Claimed!", f"You received:\n\n### ₹{reward} INR", discord.Color.gold())
+    embed = make_embed("🎁 Daily Cash Claimed!",
+                       f"You received:\n\n### ₹{reward} INR",
+                       discord.Color.gold())
     await ctx.send(embed=embed)
 
 @bot.command()
@@ -124,7 +157,9 @@ async def hunt(ctx):
     user["balance"] += reward
     save_data()
     animals = ["🐇 rabbit", "🦌 deer", "🐅 tiger", "🐓 chicken"]
-    embed = make_embed("🏹 Hunt Successful!", f"You hunted a **{random.choice(animals)}**\nEarned: **₹{reward} INR**", discord.Color.orange())
+    embed = make_embed("🏹 Hunt Successful!",
+                       f"You hunted a **{random.choice(animals)}**\nEarned: **₹{reward} INR**",
+                       discord.Color.orange())
     await ctx.send(embed=embed)
 
 @bot.command()
@@ -133,7 +168,9 @@ async def lootbox(ctx):
     reward = random.randint(200, 1500)
     user["balance"] += reward
     save_data()
-    embed = make_embed("📦 Lootbox Opened!", f"You found treasure inside!\n\n### ₹{reward} INR", discord.Color.purple())
+    embed = make_embed("📦 Lootbox Opened!",
+                       f"You found treasure inside!\n\n### ₹{reward} INR",
+                       discord.Color.purple())
     await ctx.send(embed=embed)
 
 @bot.command()
