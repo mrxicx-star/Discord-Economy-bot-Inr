@@ -4,14 +4,25 @@ import json
 import random
 import time
 
-TOKEN = "YOUR_BOT_TOKEN_HERE"  # Or use os.getenv("TOKEN") if using secrets
+# ----------------------------
+# TOKEN
+# ----------------------------
+import os
+TOKEN = os.getenv("TOKEN")  # Make sure to set your token in secrets/env
 
-bot = commands.Bot(command_prefix="!", intents=discord.Intents.all())
+# ----------------------------
+# BOT SETUP
+# ----------------------------
+intents = discord.Intents.all()
+bot = commands.Bot(command_prefix="!", intents=intents)
 
+# ----------------------------
+# GLOBAL VARIABLES
+# ----------------------------
 INR_IMAGE = "https://i.imgur.com/3Z6pFJQ.png"
 
 # ----------------------------
-# Database System
+# DATABASE SYSTEM
 # ----------------------------
 def load_data():
     try:
@@ -35,27 +46,28 @@ def get_user(uid):
     return users[str(uid)]
 
 # ----------------------------
-# Embed Helper
+# EMBED HELPER
 # ----------------------------
 def make_embed(title, desc, color):
     embed = discord.Embed(title=title, description=desc, color=color)
     embed.set_thumbnail(url=INR_IMAGE)
-    embed.set_footer(text="₹ INR Economy Bot")
+    embed.set_footer(text="💸 INR Economy Bot")
     return embed
 
 # ----------------------------
-# Commands
+# EVENTS
 # ----------------------------
 @bot.event
 async def on_ready():
-    print("✅ Bot Online:", bot.user)
+    print(f"✅ Bot Online: {bot.user}")
 
-# BALANCE
+# ----------------------------
+# ECONOMY COMMANDS
+# ----------------------------
 @bot.command()
 async def balance(ctx):
     user = get_user(ctx.author.id)
     bal = user["balance"]
-
     embed = make_embed(
         "💰 Wallet Balance",
         f"**{ctx.author.name}**, you have:\n\n### ₹{bal} INR",
@@ -63,12 +75,11 @@ async def balance(ctx):
     )
     await ctx.send(embed=embed)
 
-# DAILY with 24h Cooldown
 @bot.command()
 async def daily(ctx):
     user = get_user(ctx.author.id)
     now = time.time()
-    cooldown = 86400  # 24 hours
+    cooldown = 86400  # 24h
 
     if now - user["last_daily"] < cooldown:
         remaining = int(cooldown - (now - user["last_daily"]))
@@ -85,7 +96,6 @@ async def daily(ctx):
     user["balance"] += reward
     user["last_daily"] = now
     save_data()
-
     embed = make_embed(
         "🎁 Daily Cash Claimed!",
         f"You received:\n\n### ₹{reward} INR",
@@ -93,7 +103,6 @@ async def daily(ctx):
     )
     await ctx.send(embed=embed)
 
-# HUNT
 @bot.command()
 async def hunt(ctx):
     user = get_user(ctx.author.id)
@@ -108,7 +117,22 @@ async def hunt(ctx):
     )
     await ctx.send(embed=embed)
 
-# GAMBLE
+@bot.command()
+async def lootbox(ctx):
+    user = get_user(ctx.author.id)
+    reward = random.randint(200, 1500)
+    user["balance"] += reward
+    save_data()
+    embed = make_embed(
+        "📦 Lootbox Opened!",
+        f"You found treasure inside!\n\n### ₹{reward} INR",
+        discord.Color.purple()
+    )
+    await ctx.send(embed=embed)
+
+# ----------------------------
+# GAMBLING COMMANDS
+# ----------------------------
 @bot.command()
 async def gamble(ctx, amount: int):
     user = get_user(ctx.author.id)
@@ -131,7 +155,6 @@ async def gamble(ctx, amount: int):
     embed = make_embed("🎰 Gamble Result", result, color)
     await ctx.send(embed=embed)
 
-# COINFLIP
 @bot.command()
 async def coinflip(ctx, amount: int, choice: str):
     user = get_user(ctx.author.id)
@@ -152,21 +175,9 @@ async def coinflip(ctx, amount: int, choice: str):
     embed = make_embed("🪙 Coinflip", msg, color)
     await ctx.send(embed=embed)
 
-# LOOTBOX
-@bot.command()
-async def lootbox(ctx):
-    user = get_user(ctx.author.id)
-    reward = random.randint(200, 1500)
-    user["balance"] += reward
-    save_data()
-    embed = make_embed(
-        "📦 Lootbox Opened!",
-        f"You found treasure inside!\n\n### ₹{reward} INR",
-        discord.Color.purple()
-    )
-    await ctx.send(embed=embed)
-
-# TOP LEADERBOARD
+# ----------------------------
+# LEADERBOARD
+# ----------------------------
 @bot.command()
 async def top(ctx):
     sorted_users = sorted(users.items(), key=lambda x: x[1]["balance"], reverse=True)
@@ -175,65 +186,72 @@ async def top(ctx):
         user_obj = await bot.fetch_user(int(uid))
         leaderboard += f"**{i}. {user_obj.name}** — ₹{data['balance']} INR\n"
 
-    embed = make_embed(
-        "🏆 Top Richest Users",
-        leaderboard,
-        discord.Color.blue()
-    )
+    embed = make_embed("🏆 Top Richest Users", leaderboard, discord.Color.blue())
     await ctx.send(embed=embed)
 
 # ----------------------------
-# HELP MENU
+# INFO COMMAND
+# ----------------------------
+@bot.command()
+async def ping(ctx):
+    await ctx.send(f"🏓 Pong {round(bot.latency*1000)}ms")
+
+# ----------------------------
+# OWO-STYLE HELP MENU
 # ----------------------------
 from discord.ui import View
 
-class HelpButtons(View):
+class HelpMenu(View):
     def __init__(self):
         super().__init__(timeout=180)
 
-    async def update_embed(self, interaction, title, desc):
-        embed = discord.Embed(
-            title=title,
-            description=desc,
-            color=discord.Color.red()
-        )
+    async def update_embed(self, interaction, title, description):
+        embed = discord.Embed(title=title, description=description, color=discord.Color.red())
         embed.set_thumbnail(url=INR_IMAGE)
-        embed.set_footer(text="₹ INR Economy Bot - Help Menu")
+        embed.set_footer(text="💸 INR Economy Bot Help Menu")
         await interaction.response.edit_message(embed=embed, view=self)
 
     @discord.ui.button(label="💰 Economy", style=discord.ButtonStyle.red)
     async def economy(self, interaction, button):
         desc = (
-            "`!balance` ➝ Check wallet\n"
-            "`!daily` ➝ Claim daily reward\n"
-            "`!hunt` ➝ Hunt animals\n"
-            "`!lootbox` ➝ Open lootbox\n"
+            "💵 `!balance` — Check your wallet\n"
+            "🎁 `!daily` — Claim daily reward (24h cooldown)\n"
+            "🏹 `!hunt` — Hunt animals for money\n"
+            "📦 `!lootbox` — Open a lootbox for random cash\n"
         )
         await self.update_embed(interaction, "💰 Economy Commands", desc)
 
-    @discord.ui.button(label="🎲 Gamble", style=discord.ButtonStyle.red)
-    async def gamble_btn(self, interaction, button):
+    @discord.ui.button(label="🎲 Gambling", style=discord.ButtonStyle.red)
+    async def gambling(self, interaction, button):
         desc = (
-            "`!gamble <amount>` ➝ 50/50 chance to win or lose\n"
-            "`!coinflip <amount> <heads/tails>` ➝ Bet on coinflip\n"
+            "🎰 `!gamble <amount>` — 50/50 chance to win or lose money\n"
+            "🪙 `!coinflip <amount> <heads/tails>` — Bet on coinflip outcome\n"
         )
         await self.update_embed(interaction, "🎲 Gambling Commands", desc)
 
     @discord.ui.button(label="🏆 Leaderboard", style=discord.ButtonStyle.red)
     async def leaderboard(self, interaction, button):
-        desc = "`!top` ➝ Top 5 richest users in server"
+        desc = "🥇 `!top` — See top 5 richest users in the server"
         await self.update_embed(interaction, "🏆 Leaderboard", desc)
+
+    @discord.ui.button(label="ℹ Info", style=discord.ButtonStyle.red)
+    async def info(self, interaction, button):
+        desc = (
+            "🤖 `!help` — Show this help menu\n"
+            "🏓 `!ping` — Check bot latency"
+        )
+        await self.update_embed(interaction, "ℹ Bot Info", desc)
 
 @bot.command()
 async def help(ctx):
     embed = discord.Embed(
         title="🚨 INR Economy Bot Help Menu",
-        description="Click the buttons below to view categories",
+        description="Click a button below to view command categories",
         color=discord.Color.red()
     )
     embed.set_thumbnail(url=INR_IMAGE)
-    embed.set_footer(text="All Commands Working ✅")
-    await ctx.send(embed=embed, view=HelpButtons())
+    embed.set_footer(text="All Commands ✅ | Click buttons to view categories")
+    await ctx.send(embed=embed, view=HelpMenu())
 
 # ----------------------------
 # RUN BOT
