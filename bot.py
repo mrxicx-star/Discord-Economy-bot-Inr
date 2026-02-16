@@ -3,12 +3,11 @@ from discord.ext import commands
 import json
 import random
 import time
-import os
+
 
 # ----------------------------
 # TOKEN FROM RENDER ENV
 # ----------------------------
-TOKEN = os.getenv("DISCORD_BOT_TOKEN")
 
 if TOKEN is None:
     print("❌ TOKEN NOT FOUND!")
